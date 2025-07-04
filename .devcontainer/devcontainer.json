@@ -7,7 +7,13 @@
       "version": "18"
     },
     "ghcr.io/devcontainers/features/git:1": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {}
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/r:1": {
+      "version": "4.4",
+      "installDevtools": true,
+      "installRadian": false,
+      "installVscDebugger": true
+    }
   },
 
   "customizations": {
@@ -79,7 +85,7 @@
         "git.confirmSync": false,
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
-          "source.organizeImports": true
+          "source.organizeImports": "explicit"
         },
         "sqltools.connections": [
           {

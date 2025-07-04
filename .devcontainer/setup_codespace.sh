@@ -460,31 +460,42 @@ fi
 
 # Install essential R packages with robust error handling
 if command -v R &> /dev/null; then
-    echo "📈 Installing essential R packages for seamless student experience..."
+    echo "📈 Installing essential R packages in background (non-blocking)..."
     
-    # Install packages one by one with very short timeouts to prevent hanging
-    install_r_pkg() {
-        local pkg=$1
-        echo "� Installing $pkg..."
-        timeout 60 sudo R --slave --vanilla -e "
-        options(repos='https://cloud.r-project.org/', timeout=30)
-        tryCatch({
-            install.packages('$pkg', dependencies=FALSE, quiet=TRUE)
-            if(require('$pkg', character.only=TRUE, quietly=TRUE)) {
-                cat('✅ $pkg ready\n')
+    # Create a background R package installer that won't block container creation
+    cat > /tmp/install_r_packages_bg.sh << 'RBGEOF'
+#!/bin/bash
+# Background R package installer
+echo "🔄 Installing R packages in background..."
+timeout 300 R --slave --vanilla -e "
+options(repos='https://cloud.r-project.org/', timeout=60)
+packages <- c('DBI', 'RPostgreSQL')
+for(pkg in packages) {
+    tryCatch({
+        if(!require(pkg, character.only=TRUE, quietly=TRUE)) {
+            cat('📦 Installing', pkg, '...\n')
+            install.packages(pkg, dependencies=FALSE, quiet=TRUE)
+            if(require(pkg, character.only=TRUE, quietly=TRUE)) {
+                cat('✅', pkg, 'installed successfully\n')
             } else {
-                cat('⚠️ $pkg may need manual install\n')
+                cat('⚠️', pkg, 'installation failed\n')
             }
-        }, error=function(e) cat('⚠️ $pkg failed\n'))
-        " 2>/dev/null || echo "⚠️ $pkg timed out"
-    }
+        } else {
+            cat('✅', pkg, 'already available\n')
+        }
+    }, error=function(e) {
+        cat('❌', pkg, 'failed:', as.character(e), '\n')
+    })
+}
+cat('📊 R packages setup complete\n')
+" > /tmp/r_install.log 2>&1
+RBGEOF
     
-    # Install just the most critical packages
-    install_r_pkg "DBI"
-    install_r_pkg "RPostgreSQL"
-    
-    echo "📊 Essential R packages setup attempted"
-    echo "💡 If any failed, students can run: bash scripts/install_r_packages.sh"
+    chmod +x /tmp/install_r_packages_bg.sh
+    # Start installation in background - won't block container creation
+    nohup /tmp/install_r_packages_bg.sh > /tmp/r_bg_install.log 2>&1 &
+    echo "✅ R package installation started in background"
+    echo "💡 Check progress: tail -f /tmp/r_bg_install.log"
 else
     echo "⚠️ R not available - students will need to install R manually"
 fi

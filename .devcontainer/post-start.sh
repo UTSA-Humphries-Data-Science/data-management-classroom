@@ -29,6 +29,34 @@ wait_for_service() {
 
 # Ensure all scripts are executable
 chmod +x scripts/*.sh scripts/*.py 2>/dev/null || true
+chmod +x .devcontainer/*.sh 2>/dev/null || true
+
+# Install essential packages
+echo "📦 Installing essential Python and R packages..."
+
+# Install system dependencies first
+if [ -f ".devcontainer/install_system_deps.sh" ]; then
+    echo "🔧 Installing system dependencies..."
+    ./.devcontainer/install_system_deps.sh
+else
+    echo "⚠️ System dependencies installer not found"
+fi
+
+# Install Python packages
+if [ -f ".devcontainer/install_python_packages.sh" ]; then
+    echo "🐍 Installing Python packages..."
+    ./.devcontainer/install_python_packages.sh
+else
+    echo "⚠️ Python package installer not found"
+fi
+
+# Install R packages
+if [ -f ".devcontainer/install_r_packages.sh" ]; then
+    echo "📊 Installing R packages..."
+    ./.devcontainer/install_r_packages.sh
+else
+    echo "⚠️ R package installer not found"
+fi
 
 # Check if we're in a GitHub Codespace
 if [ -n "$CODESPACE_NAME" ]; then

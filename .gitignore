@@ -6,6 +6,8 @@ __pycache__/
 .env
 venv/
 env/
+.venv/
+.mypy_cache/
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -30,3 +32,15 @@ Thumbs.db
 .Rhistory
 .RData
 .Ruserdata
+
+# Temporary and build files
+*.tmp
+*.temp
+*.log
+build/
+dist/
+
+# Archives and downloads
+*.zip
+*.tar.gz
+*.tgz
