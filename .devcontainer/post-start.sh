@@ -6,18 +6,24 @@ echo "🔄 Starting data science environment..."
 # Navigate to workspace first
 cd /workspaces/data-management-classroom 2>/dev/null || cd /workspaces
 
-# Function to check if a service is ready
-wait_for_service() {
-    local service_name=$1
-    local check_command=$2
-    local max_wait=${3:-60}
-    local wait_time=0
-    
-    echo "⏳ Waiting for $service_name to be ready..."
-    while ! eval "$check_command" &>/dev/null; do
-        if [ $wait_time -ge $max_wait ]; then
-            echo "⚠️ Timeout waiting for $service_name"
-            return 1
+# Quick environment check
+echo "🔍 Quick environment check..."
+if command -v python3 &> /dev/null; then
+    echo "✅ Python available: $(python3 --version)"
+else
+    echo "⚠️ Python not found"
+fi
+
+if command -v R &> /dev/null; then
+    echo "✅ R available: $(R --version | head -1)"
+else
+    echo "⚠️ R not found - will attempt installation"
+    # Try to install R if missing
+    if command -v apt-get &> /dev/null; then
+        echo "📦 Installing R..."
+        sudo apt-get update -qq && sudo apt-get install -y r-base r-base-dev &>/dev/null || echo "❌ R installation failed"
+    fi
+fi
         fi
         sleep 5
         wait_time=$((wait_time + 5))

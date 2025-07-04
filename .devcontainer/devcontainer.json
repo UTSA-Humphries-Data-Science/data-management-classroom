@@ -8,11 +8,9 @@
     },
     "ghcr.io/devcontainers/features/git:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/devcontainers/features/r:1": {
+    "ghcr.io/rocker-org/devcontainer-features/r-apt:latest": {
       "version": "4.4",
-      "installDevtools": true,
-      "installRadian": false,
-      "installVscDebugger": true
+      "vscodeRSupport": true
     }
   },
 
@@ -69,8 +67,9 @@
       "settings": {
         "python.defaultInterpreterPath": "/usr/local/python/current/bin/python",
         "python.terminal.activateEnvironment": true,
-        "r.rpath": "/usr/local/bin/R",
-        "r.rterm.linux": "/usr/local/bin/R",
+        "r.rpath": "/usr/bin/R",
+        "r.rterm.linux": "/usr/bin/R",
+        "r.alwaysUseActiveTerminal": true,
         "jupyter.jupyterServerType": "local",
         "jupyter.kernels.filter": [],
         "files.associations": {

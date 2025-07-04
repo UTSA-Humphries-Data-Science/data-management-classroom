@@ -69,6 +69,45 @@ else
     echo "⚠️ Some Python packages may have failed"
 fi
 
+echo "📊 Installing R and essential packages..."
+# Install R base and development packages
+if quick_install sudo apt-get install -y r-base r-base-dev r-cran-devtools; then
+    echo "✅ R base installed"
+    
+    # Install essential R packages with timeout
+    echo "📦 Installing essential R packages..."
+    timeout 300 sudo R --slave --no-restore --no-save -e "
+    options(repos = c(CRAN = 'https://cloud.r-project.org/'))
+    options(timeout = 60)
+    packages <- c('languageserver', 'jsonlite', 'httr', 'IRkernel')
+    for (pkg in packages) {
+        tryCatch({
+            if (!require(pkg, character.only = TRUE, quietly = TRUE)) {
+                install.packages(pkg, dependencies = TRUE, quiet = TRUE)
+                cat('Installed:', pkg, '\n')
+            }
+        }, error = function(e) {
+            cat('Failed to install:', pkg, '-', e\$message, '\n')
+        })
+    }
+    " 2>/dev/null || echo "⚠️ Some R packages installation had issues"
+    
+    # Configure R for Jupyter if IRkernel was installed
+    timeout 60 sudo R --slave -e "
+    tryCatch({
+        library(IRkernel)
+        IRkernel::installspec(user = FALSE)
+        cat('R kernel for Jupyter installed\n')
+    }, error = function(e) {
+        cat('R kernel installation failed\n')
+    })
+    " 2>/dev/null || echo "ℹ️ R kernel setup skipped"
+    
+    echo "✅ R environment configured"
+else
+    echo "⚠️ R installation failed - continuing without R"
+fi
+
 # Create workspace and scripts
 echo "📁 Creating workspace..."
 mkdir -p /workspaces/data-management-classroom/{notebooks,scripts,databases}
