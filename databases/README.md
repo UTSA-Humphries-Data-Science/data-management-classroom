@@ -81,33 +81,12 @@ This directory contains several sample databases commonly used for learning SQL 
 
 ## Loading a Database
 
-### Quick Start - Load All Databases
-```bash
-# Load all sample databases at once
-./scripts/load_databases.sh load-all
 
-# List available databases
-./scripts/load_databases.sh list
-
-# Test all databases
-./scripts/load_databases.sh test
-```
-
-### Load Individual Databases
-```bash
-# Load a specific database
-./scripts/load_databases.sh load northwind
-./scripts/load_databases.sh load chinook
-./scripts/load_databases.sh load sakila
-
-# Or use psql directly
-psql -U student -d student_db -f databases/northwind.sql
-```
 
 ### Manual Loading
 ```bash
 # Method 1: Using psql directly
-psql -U student -d student_db -f databases/northwind.sql
+psql -U vscode -d postgres -f /workspaces/data-management-classroom/databases/[filename].sql
 
 # Method 2: Using the setup script
 ./scripts/setup_database.sh northwind
