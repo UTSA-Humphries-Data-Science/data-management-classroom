@@ -1,4 +1,4 @@
--- Sample database setup
+-- Sample database setup for classroom
 CREATE TABLE IF NOT EXISTS students (
     id SERIAL PRIMARY KEY, 
     name VARCHAR(100), 

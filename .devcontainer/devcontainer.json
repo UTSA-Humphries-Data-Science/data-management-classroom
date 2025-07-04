@@ -125,7 +125,7 @@
     }
   },
 
-  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "postCreateCommand": "bash .devcontainer/setup_codespace.sh",
   "postStartCommand": "bash .devcontainer/post-start.sh",
 
   "remoteUser": "vscode",

@@ -1,46 +1,9 @@
 #!/usr/bin/env python3
-"""Test database connection"""
+"""Test database connection for Codespace environment"""
 import psycopg2
 import sys
 import subprocess
 import time
-
-def check_docker_container():
-    """Check if PostgreSQL container is running"""
-    try:
-        result = subprocess.run(['docker', 'ps'], capture_output=True, text=True, timeout=10)
-        if 'classroom-db' in result.stdout or 'postgres' in result.stdout:
-            return True
-        return False
-    except:
-        return False
-
-def start_postgres_container():
-    """Try to start PostgreSQL container"""
-    try:
-        print("🚀 Attempting to start PostgreSQL container...")
-        cmd = [
-            'docker', 'run', '-d', 
-            '--name', 'classroom-db',
-            '-p', '5432:5432',
-            '-e', 'POSTGRES_USER=student',
-            '-e', 'POSTGRES_PASSWORD=student_password',
-            '-e', 'POSTGRES_DB=postgres',
-            'postgres:15'
-        ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        
-        if result.returncode == 0:
-            print("✅ PostgreSQL container started successfully")
-            print("⏳ Waiting for database to be ready...")
-            time.sleep(10)  # Give the database time to start
-            return True
-        else:
-            print(f"❌ Failed to start container: {result.stderr}")
-            return False
-    except Exception as e:
-        print(f"❌ Error starting container: {e}")
-        return False
 
 def test_connection():
     """Test database connection with multiple credential attempts"""
@@ -48,7 +11,7 @@ def test_connection():
     # Connection attempts to try
     attempts = [
         {
-            "name": "Docker setup (student with password)",
+            "name": "Codespace setup (student with password)",
             "params": {
                 "host": "localhost",
                 "database": "postgres",
@@ -69,7 +32,7 @@ def test_connection():
             }
         },
         {
-            "name": "Peer authentication (current user)",
+            "name": "Current user authentication",
             "params": {
                 "database": "postgres",
                 "user": "vscode",
@@ -95,45 +58,41 @@ def test_connection():
     
     return False
 
+def check_postgres_service():
+    """Check if PostgreSQL service is running"""
+    try:
+        result = subprocess.run(['sudo', 'service', 'postgresql', 'status'], 
+                              capture_output=True, text=True, timeout=10)
+        return 'online' in result.stdout
+    except:
+        return False
+
 if __name__ == "__main__":
     print("🧪 Testing Database Connection...")
     print("=" * 40)
     
-    # First check if we can connect
-    if test_connection():
-        sys.exit(0)
-    
-    # If connection failed, check if container is running
-    print("\n🔍 Checking for running PostgreSQL container...")
-    if not check_docker_container():
-        print("❌ No PostgreSQL container found")
-        
-        # Try to start container if docker is available
+    # Check if PostgreSQL is running
+    if not check_postgres_service():
+        print("⚠️ PostgreSQL service not running. Starting it...")
         try:
-            subprocess.run(['docker', '--version'], capture_output=True, timeout=5)
-            if start_postgres_container():
-                if test_connection():
-                    sys.exit(0)
+            subprocess.run(['sudo', 'service', 'postgresql', 'start'], timeout=30)
+            time.sleep(3)
         except:
-            print("❌ Docker not available")
+            pass
     
-    print("\n💡 Database connection failed. Here are your options:")
-    print("\n🐳 Option 1: Docker Database (Recommended)")
-    print("   docker run -d --name classroom-db -p 5432:5432 \\")
-    print("     -e POSTGRES_USER=student -e POSTGRES_PASSWORD=student_password \\")
-    print("     -e POSTGRES_DB=postgres postgres:15")
-    print("   Then test: python scripts/test_connection.py")
-    
-    print("\n🖥️  Option 2: Local PostgreSQL (if you have admin access)")
-    print("   bash scripts/fix_database_connection.sh")
-    
-    print("\n☁️  Option 3: External Database")
-    print("   - Use a cloud database (AWS RDS, Google Cloud SQL, etc.)")
-    print("   - Update connection details in scripts")
-    
-    print("\n📊 Current Password Setup:")
-    print("   🐳 Docker: username=student, password=student_password")
-    print("   🖥️  Local: username=student, password=(none - trust authentication)")
-    print("   ☁️  External: Use your cloud provider's credentials")
-    
-    sys.exit(1)
+    # Test the connection
+    if test_connection():
+        print("\n🎉 Database connection successful!")
+        print("\n📊 Connection details:")
+        print("   Host: localhost")
+        print("   Database: postgres")
+        print("   Username: student")
+        print("   Password: student_password")
+        sys.exit(0)
+    else:
+        print("\n❌ Database connection failed")
+        print("\n💡 The database will be configured during post-start setup")
+        print("   This is normal during initial container creation")
+        print("\n🔧 To manually configure, run:")
+        print("   bash scripts/setup_database.sh")
+        sys.exit(1)

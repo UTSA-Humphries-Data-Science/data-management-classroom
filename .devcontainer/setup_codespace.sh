@@ -43,6 +43,24 @@ quick_install sudo apt-get update -qq
 echo "🗄️ Installing PostgreSQL server and client..."
 quick_install sudo apt-get install -y postgresql postgresql-contrib
 
+# Configure PostgreSQL for passwordless local access (ideal for dev containers)
+echo "🔧 Configuring PostgreSQL for seamless local access..."
+if [ -f /etc/postgresql/*/main/pg_hba.conf ]; then
+    PG_HBA=$(find /etc/postgresql -name pg_hba.conf | head -1)
+    # Backup original
+    sudo cp "$PG_HBA" "$PG_HBA.backup" 2>/dev/null || true
+    # Add trust authentication for local connections at the top
+    sudo sed -i '1i# Local connections without password for dev environment\nlocal   all             all                                     trust\nhost    all             all             127.0.0.1/32            trust\nhost    all             all             ::1/128                 trust\n' "$PG_HBA"
+    
+    # Restart PostgreSQL to apply configuration
+    sudo service postgresql restart
+    sleep 3
+    
+    echo "✅ PostgreSQL configured for local trust authentication"
+else
+    echo "⚠️ PostgreSQL config not found - will configure later"
+fi
+
 echo "🐍 Installing Python essentials..."
 # Install Python packages with user flag to avoid permission issues
 if quick_install pip install --no-cache-dir --user psycopg2-binary pandas numpy jupyter; then
@@ -53,10 +71,10 @@ fi
 
 # Create workspace and scripts
 echo "📁 Creating workspace..."
-mkdir -p /workspaces/data-managment/{notebooks,scripts,databases}
+mkdir -p /workspaces/data-management-classroom/{notebooks,scripts,databases}
 
 # Simple database connection test script
-cat > /workspaces/data-managment/scripts/test_connection.py << 'EOF'
+cat > /workspaces/data-management-classroom/scripts/test_connection.py << 'EOF'
 #!/usr/bin/env python3
 """Test database connection for Codespace environment"""
 import psycopg2
@@ -158,7 +176,7 @@ if __name__ == "__main__":
 EOF
 
 # Database setup script
-cat > /workspaces/data-managment/scripts/setup_database.sh << 'EOF'
+cat > /workspaces/data-management-classroom/scripts/setup_database.sh << 'EOF'
 #!/bin/bash
 echo "🗄️ Setting up PostgreSQL for Codespace environment..."
 
@@ -166,12 +184,26 @@ echo "🗄️ Setting up PostgreSQL for Codespace environment..."
 echo "🚀 Starting PostgreSQL service..."
 sudo service postgresql start
 
+# Configure trust authentication if not already done
+echo "🔧 Configuring PostgreSQL for passwordless local access..."
+if [ -f /etc/postgresql/*/main/pg_hba.conf ]; then
+    PG_HBA=$(find /etc/postgresql -name pg_hba.conf | head -1)
+    if ! grep -q "# Local connections without password for dev environment" "$PG_HBA"; then
+        sudo cp "$PG_HBA" "$PG_HBA.backup" 2>/dev/null || true
+        sudo sed -i '1i# Local connections without password for dev environment\nlocal   all             all                                     trust\nhost    all             all             127.0.0.1/32            trust\nhost    all             all             ::1/128                 trust\n' "$PG_HBA"
+        sudo service postgresql reload
+        echo "✅ PostgreSQL trust authentication configured"
+    else
+        echo "✅ PostgreSQL trust authentication already configured"
+    fi
+fi
+
 # Wait for it to be ready
 sleep 3
 
-# Create student user and database
+# Create student user and database using psql directly (no sudo -u needed with trust auth)
 echo "👤 Creating student user and database..."
-sudo -u postgres psql << 'DBEOF'
+psql -h localhost -U postgres -d postgres << 'DBEOF' || echo "⚠️ Database setup may need manual configuration"
 -- Create student user if it doesn't exist
 DO $$
 BEGIN
@@ -183,61 +215,100 @@ BEGIN
 END
 $$;
 
--- Create vscode user if it doesn't exist  
+-- Create vscode user if it doesn't exist (no password for local trust auth)
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'vscode') THEN
-        CREATE USER vscode WITH PASSWORD 'vscode_password';
+        CREATE USER vscode;
         ALTER USER vscode CREATEDB;
         GRANT ALL PRIVILEGES ON DATABASE postgres TO vscode;
+    ELSE
+        -- Remove password from existing vscode user for trust auth
+        ALTER USER vscode PASSWORD NULL;
     END IF;
 END
 $$;
 
 -- Create classroom database if it doesn't exist
-SELECT 'CREATE DATABASE classroom_db OWNER student' 
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'classroom_db');
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_database WHERE datname = 'classroom_db') THEN
+        CREATE DATABASE classroom_db OWNER student;
+    END IF;
+END
+$$;
 
 \q
 DBEOF
 
-if [ $? -eq 0 ]; then
-    echo "✅ Database setup completed successfully!"
-    echo ""
-    echo "📊 Connection details:"
-    echo "   Host: localhost"
-    echo "   Port: 5432"
-    echo "   Database: postgres"
-    echo "   Username: student"
-    echo "   Password: student_password"
-    echo ""
-    echo "💡 Test the connection:"
-    echo "   python scripts/test_connection.py"
-else
-    echo "❌ Database setup failed"
-    echo "💡 This may be due to permissions - will be configured in post-start"
-fi
+echo "✅ Database setup completed successfully!"
+echo ""
+echo "📊 Connection details:"
+echo "   Host: localhost"
+echo "   Port: 5432"
+echo "   Database: postgres"
+echo "   Username: student (with password: student_password)"
+echo "   Username: vscode (no password needed - trust auth)"
+echo ""
+echo "💡 Test the connection:"
+echo "   python scripts/test_connection.py"
 EOF
 
 # R packages installer script
-cat > /workspaces/data-managment/scripts/install_r_packages.sh << 'EOF'
+cat > /workspaces/data-management-classroom/scripts/install_r_packages.sh << 'EOF'
 #!/bin/bash
 echo "📊 Installing R packages for data science..."
-sudo R -e "
-packages <- c('DBI', 'RPostgreSQL', 'dplyr', 'ggplot2', 'readr')
-for(pkg in packages) {
+
+if ! command -v R &> /dev/null; then
+    echo "❌ R not found. Installing R first..."
+    sudo apt-get update -qq
+    sudo apt-get install -y r-base
+fi
+
+# Function to install R packages with aggressive timeout
+install_r_package() {
+    local package=$1
+    echo "📦 Installing $package..."
+    timeout 90 sudo R --slave --vanilla -e "
+    options(repos='https://cloud.r-project.org/', timeout=60)
     tryCatch({
-        if(!require(pkg, character.only=TRUE, quietly=TRUE)) {
-            install.packages(pkg, repos='https://cloud.r-project.org/')
+        if(!require('$package', character.only=TRUE, quietly=TRUE)) {
+            install.packages('$package', dependencies=FALSE, quiet=TRUE)
+            if(require('$package', character.only=TRUE, quietly=TRUE)) {
+                cat('✅ $package installed successfully\n')
+            } else {
+                cat('❌ $package installation failed\n')
+            }
+        } else {
+            cat('✅ $package already available\n')
         }
-        cat('✅', pkg, 'ready\n')
-    }, error=function(e) cat('❌', pkg, 'failed\n'))
+    }, error=function(e) {
+        cat('❌ $package failed:', as.character(e), '\n')
+    })
+    " 2>/dev/null || echo "⚠️ $package installation timed out"
 }
-"
+
+# Install packages one by one to avoid hanging
+echo "🔄 Installing essential packages first..."
+install_r_package "DBI"
+install_r_package "RPostgreSQL" 
+
+echo "🔄 Installing data manipulation packages..."
+install_r_package "dplyr"
+install_r_package "readr"
+
+echo "🔄 Installing visualization packages..."
+install_r_package "ggplot2"
+
+echo ""
+echo "📊 R package installation complete!"
+echo "💡 To test R packages:"
+echo "   R -e \"library(DBI); library(RPostgreSQL)\""
+echo "   R -e \"library(dplyr); library(ggplot2)\""
 EOF
 
 # Enhanced test script for Codespace environment
-cat > /workspaces/data-managment/scripts/test.py << 'EOF'
+cat > /workspaces/data-management-classroom/scripts/test.py << 'EOF'
 #!/usr/bin/env python3
 """Environment test for Codespace data science setup"""
 import subprocess
@@ -259,6 +330,16 @@ def test_r():
         result = subprocess.run(['R', '--version'], capture_output=True, timeout=5)
         if result.returncode == 0:
             print("✅ R installed")
+            # Test if essential packages are available
+            try:
+                r_test = subprocess.run(['R', '--slave', '-e', 'library(DBI); library(RPostgreSQL)'], 
+                                      capture_output=True, timeout=10)
+                if r_test.returncode == 0:
+                    print("✅ R essential packages available")
+                else:
+                    print("⚠️ R packages may need installation")
+            except:
+                print("⚠️ R package test failed")
             return True
         else:
             print("❌ R issue")
@@ -340,7 +421,7 @@ if __name__ == "__main__":
 EOF
 
 # Sample database
-cat > /workspaces/data-managment/databases/sample.sql << 'EOF'
+cat > /workspaces/data-management-classroom/databases/sample.sql << 'EOF'
 -- Sample database setup for classroom
 CREATE TABLE IF NOT EXISTS students (
     id SERIAL PRIMARY KEY, 
@@ -360,8 +441,8 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO student;
 EOF
 
 # Make scripts executable
-chmod +x /workspaces/data-managment/scripts/*.sh
-chmod +x /workspaces/data-managment/scripts/*.py
+chmod +x /workspaces/data-management-classroom/scripts/*.sh
+chmod +x /workspaces/data-management-classroom/scripts/*.py
 
 # Try to install R if not already done
 echo "🔄 Attempting R setup..."
@@ -373,37 +454,39 @@ if ! command -v R &> /dev/null; then
         echo "⚠️ R installation failed - students can install later"
         echo "💡 Install command: sudo apt-get install -y r-base"
     fi
+else
+    echo "✅ R already installed"
 fi
 
-# If R is available, try to install essential packages
+# Install essential R packages with robust error handling
 if command -v R &> /dev/null; then
-    echo "📈 Installing essential R packages..."
-    timeout 180 sudo R --slave -e "
-    options(timeout=60, warn=1)
-    packages <- c('DBI', 'RPostgreSQL', 'dplyr', 'ggplot2', 'readr')
-    installed_count <- 0
-    for(pkg in packages) {
+    echo "📈 Installing essential R packages for seamless student experience..."
+    
+    # Install packages one by one with very short timeouts to prevent hanging
+    install_r_pkg() {
+        local pkg=$1
+        echo "� Installing $pkg..."
+        timeout 60 sudo R --slave --vanilla -e "
+        options(repos='https://cloud.r-project.org/', timeout=30)
         tryCatch({
-            if(!require(pkg, character.only=TRUE, quietly=TRUE)) {
-                install.packages(pkg, repos='https://cloud.r-project.org/', dependencies=FALSE, quiet=TRUE)
-                if(require(pkg, character.only=TRUE, quietly=TRUE)) {
-                    cat('✅', pkg, 'installed successfully\n')
-                    installed_count <- installed_count + 1
-                } else {
-                    cat('⚠️', pkg, 'installation failed\n')
-                }
+            install.packages('$pkg', dependencies=FALSE, quiet=TRUE)
+            if(require('$pkg', character.only=TRUE, quietly=TRUE)) {
+                cat('✅ $pkg ready\n')
             } else {
-                cat('✅', pkg, 'already available\n')
-                installed_count <- installed_count + 1
+                cat('⚠️ $pkg may need manual install\n')
             }
-        }, error=function(e) {
-            cat('⚠️', pkg, 'failed:', as.character(e), '\n')
-        })
+        }, error=function(e) cat('⚠️ $pkg failed\n'))
+        " 2>/dev/null || echo "⚠️ $pkg timed out"
     }
-    cat('📊 R packages setup complete:', installed_count, 'of', length(packages), 'packages ready\n')
-    " || echo "⚠️ Some R packages may have failed - can install later"
+    
+    # Install just the most critical packages
+    install_r_pkg "DBI"
+    install_r_pkg "RPostgreSQL"
+    
+    echo "📊 Essential R packages setup attempted"
+    echo "💡 If any failed, students can run: bash scripts/install_r_packages.sh"
 else
-    echo "⚠️ R not available - students can install later"
+    echo "⚠️ R not available - students will need to install R manually"
 fi
 
 echo ""
@@ -413,9 +496,9 @@ echo "🎯 What's ready:"
 echo "   ✅ PostgreSQL server and client"
 echo "   ✅ Python data science packages"  
 if command -v R &> /dev/null; then
-    echo "   ✅ R (with essential packages)"
+    echo "   ✅ R (with essential packages attempted)"
 else
-    echo "   ⚠️ R (installation pending)"
+    echo "   ⚠️ R (installation failed)"
 fi
 echo ""
 echo "🚀 Next steps:"

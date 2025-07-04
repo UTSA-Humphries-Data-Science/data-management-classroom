@@ -4,7 +4,7 @@
 echo "🔄 Starting data science environment..."
 
 # Navigate to workspace first
-cd /workspaces/data-managment 2>/dev/null || cd /workspaces
+cd /workspaces/data-management-classroom 2>/dev/null || cd /workspaces
 
 # Function to check if a service is ready
 wait_for_service() {
@@ -34,6 +34,15 @@ chmod +x scripts/*.sh scripts/*.py 2>/dev/null || true
 if [ -n "$CODESPACE_NAME" ]; then
     echo "📡 Detected GitHub Codespace: $CODESPACE_NAME"
     echo "🔧 Configuring for Codespace environment..."
+    
+    # Run the Codespace-specific setup script first
+    if [ -f ".devcontainer/setup_codespace.sh" ]; then
+        echo "🚀 Running Codespace setup script..."
+        chmod +x .devcontainer/setup_codespace.sh
+        ./.devcontainer/setup_codespace.sh
+    else
+        echo "⚠️ setup_codespace.sh not found, proceeding with manual setup..."
+    fi
     
     # In Codespaces, Docker might not be available, so set up local PostgreSQL
     echo "🗄️ Setting up local PostgreSQL for Codespace..."
@@ -156,7 +165,7 @@ alias jlab='jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root'
 alias jnb='jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root'  
 alias r-console='R'
 alias psql-connect='psql -h localhost -U student -d postgres'
-alias workspace='cd /workspaces/data-managment'
+alias workspace='cd /workspaces/data-management-classroom'
 alias dbstatus='docker ps | grep classroom-db || echo "No database container running"'
 alias dblogs='docker logs classroom-db'
 alias dbstart='docker start classroom-db 2>/dev/null || echo "Run setup script first to create database"'
