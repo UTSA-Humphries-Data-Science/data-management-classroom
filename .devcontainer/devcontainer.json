@@ -23,6 +23,7 @@
         "ms-toolsai.vscode-jupyter-slideshow",
         "reditorsupport.r",
         "ikuyadeu.r-debugger",
+        "ckolkman.vscode-postgres",
         "ms-mssql.mssql",
         "ms-mssql.sql-database-projects-vscode",
         "ms-mssql.data-workspace-vscode",
