@@ -216,7 +216,7 @@ INSERT INTO sales_order_detail (sales_order_id, order_qty, product_id, special_o
 (4, 1, 5, 1, 3578.27, 0.00, 3578.27),
 (5, 4, 9, 1, 59.99, 0.00, 239.96);
 
--- Grant permissions to student user
-GRANT ALL PRIVILEGES ON SCHEMA adventureworks TO student;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA adventureworks TO student;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA adventureworks TO student;
+-- Grant permissions to vscode user
+GRANT ALL PRIVILEGES ON SCHEMA adventureworks TO vscode;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA adventureworks TO vscode;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA adventureworks TO vscode;

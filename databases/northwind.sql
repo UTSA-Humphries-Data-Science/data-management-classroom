@@ -184,7 +184,7 @@ INSERT INTO order_details (order_id, product_id, unit_price, quantity, discount)
 (3, 4, 22.00, 9, 0.0),
 (4, 5, 21.35, 40, 0.0);
 
--- Grant permissions to student user
-GRANT ALL PRIVILEGES ON SCHEMA northwind TO student;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA northwind TO student;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA northwind TO student;
+-- Grant permissions to vscode user
+GRANT ALL PRIVILEGES ON SCHEMA northwind TO vscode;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA northwind TO vscode;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA northwind TO vscode;

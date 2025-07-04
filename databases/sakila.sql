@@ -317,8 +317,8 @@ INSERT INTO payment (customer_id, staff_id, rental_id, amount, payment_date) VAL
     (5, 2, 5, 2.99, '2023-01-03 11:20:00');
 
 -- Grant permissions
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA sakila TO student;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA sakila TO student;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA sakila TO vscode;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA sakila TO vscode;
 
 -- Display summary
 SELECT 'Sakila database loaded successfully!' as status;
@@ -343,5 +343,5 @@ JOIN address a ON c.address_id = a.address_id
 JOIN city ci ON a.city_id = ci.city_id
 JOIN country co ON ci.country_id = co.country_id;
 
-GRANT SELECT ON film_list TO student;
-GRANT SELECT ON customer_list TO student;
+GRANT SELECT ON film_list TO vscode;
+GRANT SELECT ON customer_list TO vscode;

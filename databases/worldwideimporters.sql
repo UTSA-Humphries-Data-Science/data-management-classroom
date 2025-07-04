@@ -221,7 +221,7 @@ INSERT INTO order_lines (order_id, stock_item_id, description, package_type_id, 
 (4, 5, 'Smartphone holder (Black)', 7, 3, 18.00, 15.000, 3),
 (5, 6, 'Air cushion film (Blue)', 7, 20, 2.50, 15.000, 20);
 
--- Grant permissions to student user
-GRANT ALL PRIVILEGES ON SCHEMA wwi TO student;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA wwi TO student;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA wwi TO student;
+-- Grant permissions to vscode user
+GRANT ALL PRIVILEGES ON SCHEMA wwi TO vscode;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA wwi TO vscode;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA wwi TO vscode;

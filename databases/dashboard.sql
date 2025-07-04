@@ -277,9 +277,9 @@ SELECT
     'Analyze rental patterns by category' as description;
 
 -- Grant permissions
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA dashboard TO student;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA dashboard TO student;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA dashboard TO student;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA dashboard TO vscode;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA dashboard TO vscode;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA dashboard TO vscode;
 
 -- Display instructions
 SELECT 'Dashboard views created successfully!' as status;
